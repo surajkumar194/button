@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-
 const sheets = [
   {
     name: "O2D - Packaging",
     data: `5/9/2025 18:39:01\tParminder Kaur \t8146224134\tRequirement for weeding box\tPhone
-5/10/2025 15:52:54\tVruti Bhansali Mardia \t9898437067\t"Customer requirement:-
-1. Hampers
-\t12 clothing box making not possible`
+5/10/2025 15:52:54\tVruti Bhansali Mardia \t9898437067\t"Customer requirement:-\n1. Hampers\n\t12 clothing box making not possible`
   },
   {
     name: "Purchase - FMS",
-    data: `5/15/2025 11:57:49\tSwaran singh\t9855134479\t"Customer requirement:-
-Battery boxes"\tJUST DAIL\t\t\tNEED FEW BOXES FOR NEW BUSINESS.`
+    data: `5/15/2025 11:57:49\tSwaran singh\t9855134479\t"Customer requirement:-\nBattery boxes"\tJUST DAIL\t\t\tNEED FEW BOXES FOR NEW BUSINESS.`
   },
   {
     name: "IT Complaint FMS Sheet",
-    data: `Data for IT Complaint FMS Sheet`
+    url: `https://script.google.com/macros/s/AKfycbw0m4oy56-81YLxqb2HnFAfThGhMb1AuRNwME0UboJI2L9B0zYAbuZW8FHtvTy5DTg9Kw/exec?sheet=Help Ticket System`
   },
   {
     name: "Leave Request Form",
@@ -91,8 +87,14 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [darkMode, setDarkMode] = useState(false);
 
+  const [sortAsc, setSortAsc] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isHalfscreen, setIsHalfscreen] = useState(false);
+
   const handleAccess = async (sheet) => {
     setSelectedSheet(null);
+    setIsFullscreen(false);
+    setIsHalfscreen(false);
     if (sheet.url) {
       setLoadingSheetName(sheet.name);
       try {
@@ -115,9 +117,19 @@ export default function App() {
     sheet.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedSheets = [...filteredSheets].sort((a, b) => {
+    if (a.name < b.name) return sortAsc ? -1 : 1;
+    if (a.name > b.name) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === "Escape") setSelectedSheet(null);
+      if (e.key === "Escape") {
+        setSelectedSheet(null);
+        setIsFullscreen(false);
+        setIsHalfscreen(false);
+      }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
@@ -137,6 +149,37 @@ export default function App() {
       element.click();
       document.body.removeChild(element);
     }
+  };
+
+  const handleCopyToClipboard = () => {
+    if (!selectedSheet) return alert("No sheet selected to copy.");
+    navigator.clipboard.writeText(selectedSheet.data)
+      .then(() => alert("Sheet data copied to clipboard!"))
+      .catch(() => alert("Failed to copy data."));
+  };
+
+  const copySheetName = () => {
+    if (!selectedSheet) return alert("No sheet selected.");
+    navigator.clipboard.writeText(selectedSheet.name)
+      .then(() => alert("Sheet name copied to clipboard!"))
+      .catch(() => alert("Failed to copy sheet name."));
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      setIsFullscreen(false);
+      setIsHalfscreen(false);
+    } else {
+      setIsFullscreen(true);
+    }
+  };
+
+  const toggleHalfscreen = () => {
+    setIsHalfscreen(!isHalfscreen);
   };
 
   return (
@@ -175,6 +218,7 @@ export default function App() {
           display: flex;
           justify-content: center;
           margin-bottom: 16px;
+          gap: 8px;
         }
 
         .search-box input {
@@ -183,6 +227,21 @@ export default function App() {
           border: 1px solid #93c5fd;
           width: 300px;
           font-size: 1rem;
+        }
+
+        .search-box button {
+          padding: 8px 16px;
+          border-radius: 8px;
+          border: 1px solid #2563eb;
+          background-color: white;
+          color: #2563eb;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+
+        .search-box button:hover {
+          background-color: #bfdbfe;
         }
 
         .table-header {
@@ -194,6 +253,29 @@ export default function App() {
           padding: 12px 16px;
           border-top-left-radius: 1rem;
           border-top-right-radius: 1rem;
+          margin-bottom: 8px;
+          align-items: center;
+        }
+
+        .container.dark .table-header {
+          background-color: #4338ca;
+        }
+
+        .table-header span:first-child {
+          user-select: none;
+        }
+
+        .sort-button {
+          background: transparent;
+          border: none;
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .sort-button:hover {
+          text-decoration: underline;
         }
 
         .table-body {
@@ -224,90 +306,138 @@ export default function App() {
           overflow: hidden;
           text-overflow: ellipsis;
           max-width: 65%;
+          user-select: text;
         }
 
         .container.dark .sheet-name {
           color: #f1f5f9;
         }
 
-        .access-button {
-          padding: 8px 24px;
-          border: 1.5px solid #3b82f6;
-          border-radius: 0.5rem;
-          background-color: white;
-          color: #2563eb;
-          cursor: pointer;
-          white-space: nowrap;
-          transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .access-button:hover {
-          background-color: #bfdbfe;
-          box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-        }
-
-        .container.dark .access-button {
-          background-color: #1e40af;
+        .sheet-access-btn {
+          background-color: #2563eb;
           color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+          white-space: nowrap;
+        }
+
+        .sheet-access-btn:hover {
+          background-color: #1e40af;
+        }
+
+        .container.dark .sheet-access-btn {
+          background-color: #4338ca;
+        }
+
+        .container.dark .sheet-access-btn:hover {
+          background-color: #3730a3;
         }
 
         .popup {
           position: fixed;
-          bottom: 20px;
-          right: 20px;
-          max-width: 1200px;
+          top: 10vh;
+          left: 50%;
+          transform: translateX(-50%);
+          max-width: 900px;
           max-height: 80vh;
           overflow-y: auto;
           background: white;
+          border-radius: 12px;
           padding: 24px;
-          border-radius: 1rem;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-          border: 1px solid #93c5fd;
+          box-shadow: 0 8px 16px rgba(0,0,0,0.3);
           z-index: 1000;
+          outline: none;
+        }
+
+        .popup.fullscreen {
+          top: 0;
+          left: 0;
+          transform: none;
+          width: 100vw;
+          height: 100vh;
+          border-radius: 0;
+          max-height: none;
+          overflow: auto;
+        }
+
+        .popup.halfscreen {
+          width: 100vw;
+          height: 50vh;
+          top: auto;
+          bottom: 0;
+          left: 0;
+          transform: none;
+          border-radius: 0;
+          max-height: none;
+          overflow: auto;
+        }
+
+        .popup pre {
           white-space: pre-wrap;
           font-family: monospace;
-          font-size: 0.875rem;
-          color: #374151;
+          background: #f3f4f6;
+          padding: 16px;
+          border-radius: 8px;
+          max-height: 60vh;
+          overflow-y: auto;
+          margin-bottom: 16px;
+          color: #111827;
         }
 
         .container.dark .popup {
           background: #1e293b;
-          color: #f1f5f9;
-          border-color: #334155;
+          color: #e2e8f0;
         }
 
-        .popup h2 {
-          font-weight: 700;
-          font-size: 1.125rem;
-          margin-bottom: 12px;
-          color: #7c3aed;
+        .container.dark .popup pre {
+          background: #334155;
+          color: #e2e8f0;
         }
 
-        .container.dark .popup h2 {
-          color: #c084fc;
+        .popup-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
         }
 
-        .popup button {
-          margin-top: 16px;
-          padding: 8px 16px;
-          border-radius: 0.5rem;
-          background: linear-gradient(to right, #7c3aed, #2563eb);
-          color: white;
+        .popup-buttons button {
+          padding: 10px 18px;
           border: none;
+          border-radius: 8px;
+          background-color: #2563eb;
+          color: white;
+          font-weight: 600;
           cursor: pointer;
-          font-weight: 600;
-          transition: background 0.3s ease;
-          margin-right: 12px;
+          transition: background-color 0.3s ease;
         }
 
-        .popup button:hover {
-          background: linear-gradient(to right, #6b21a8, #1e40af);
+        .popup-buttons button:hover {
+          background-color: #1e40af;
         }
 
-        .loading-text {
-          color: #2563eb;
-          font-weight: 600;
-          margin-left: 8px;
+        .container.dark .popup-buttons button {
+          background-color: #4338ca;
+        }
+
+        .container.dark .popup-buttons button:hover {
+          background-color: #3730a3;
+        }
+
+        .footer {
+          margin-top: 48px;
+          text-align: center;
+          color: #64748b;
+          font-size: 0.9rem;
+          user-select: none;
+        }
+
+        .container.dark .footer {
+          color: #94a3b8;
         }
       `}</style>
 
@@ -317,116 +447,123 @@ export default function App() {
         <div className="search-box">
           <input
             type="text"
-            placeholder="Search sheet..."
+            placeholder="Search sheet name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-        </div>
-
-        <div style={{ textAlign: "center", marginBottom: "16px" }}>
+          <button onClick={clearSearch}>Clear</button>
           <button onClick={() => setDarkMode(!darkMode)}>
-            {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            {darkMode ? "Light Mode" : "Dark Mode"}
           </button>
         </div>
 
         <div className="table-header">
           <span>Sheet Name</span>
-          <span>Action</span>
+          <button
+            className="sort-button"
+            onClick={() => setSortAsc(!sortAsc)}
+            aria-label="Toggle sort order"
+          >
+            Sort {sortAsc ? "▲" : "▼"}
+          </button>
         </div>
 
-        <div className="table-body">
-          {filteredSheets.map((sheet, i) => (
-            <div
-              key={i}
-              className="table-row"
-              style={{ backgroundColor: rowColors[i % rowColors.length] }}
-            >
-              <span className="sheet-name" title={sheet.name}>
-                {sheet.name}
-              </span>
-              <button
-                className="access-button"
+        <div className="table-body" role="list" aria-label="List of sheets">
+          {sortedSheets.length === 0 ? (
+            <p style={{ padding: 16 }}>No sheets found.</p>
+          ) : (
+            sortedSheets.map((sheet, index) => (
+              <div
+                key={sheet.name}
+                className="table-row"
+                style={{ backgroundColor: rowColors[index % rowColors.length] }}
+                role="listitem"
+                tabIndex={0}
                 onClick={() => handleAccess(sheet)}
-                disabled={!!loadingSheetName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    handleAccess(sheet);
+                  }
+                }}
+                aria-label={`Access sheet named ${sheet.name}`}
               >
-                Access Link
-              </button>
-              {loadingSheetName === sheet.name && (
-                <span className="loading-text">Loading...</span>
-              )}
-            </div>
-          ))}
+                <span className="sheet-name">{sheet.name}</span>
+                <button
+                  className="sheet-access-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAccess(sheet);
+                  }}
+                >
+                  Access
+                </button>
+              </div>
+            ))
+          )}
         </div>
 
         <AnimatePresence>
-          {selectedSheet && (
+          {(selectedSheet || loadingSheetName) && (
             <motion.div
-              className="popup"
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
+              className={`popup ${isFullscreen ? (isHalfscreen ? "halfscreen" : "fullscreen") : ""} ${darkMode ? "dark" : ""}`}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.2 }}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setSelectedSheet(null);
+                  setIsFullscreen(false);
+                  setIsHalfscreen(false);
+                }
+              }}
+              aria-modal="true"
+              role="dialog"
+              aria-labelledby="popup-title"
             >
-              <h2>{selectedSheet.name} Data</h2>
-              <div style={{ overflowX: "auto" }}>
-                {(() => {
-                  try {
-                    const parsed = JSON.parse(selectedSheet.data);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                      return (
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                          <thead>
-                            <tr style={{ backgroundColor: "#e0e7ff" }}>
-                              {Object.keys(parsed[0]).map((key) => (
-                                <th
-                                  key={key}
-                                  style={{
-                                    padding: "8px",
-                                    border: "1px solid #cbd5e1",
-                                    textAlign: "left"
-                                  }}
-                                >
-                                  {key}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {parsed.map((row, idx) => (
-                              <tr
-                                key={idx}
-                                style={{
-                                  backgroundColor: idx % 2 === 0 ? "#f9fafb" : "#fff"
-                                }}
-                              >
-                                {Object.values(row).map((val, i) => (
-                                  <td
-                                    key={i}
-                                    style={{
-                                      padding: "8px",
-                                      border: "1px solid #cbd5e1"
-                                    }}
-                                  >
-                                    {val?.toString()}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      );
-                    } else {
-                      return <pre>{selectedSheet.data}</pre>;
-                    }
-                  } catch (e) {
-                    return <pre>{selectedSheet.data}</pre>;
-                  }
-                })()}
-              </div>
-              <button onClick={handleDownload}>Download</button>
-              <button onClick={() => setSelectedSheet(null)}>Close</button>
+              <h2 id="popup-title" style={{ marginTop: 0, marginBottom: 8 }}>
+                {loadingSheetName
+                  ? `Loading "${loadingSheetName}"...`
+                  : selectedSheet?.name}
+              </h2>
+              <pre>
+                {loadingSheetName
+                  ? "Fetching data, please wait..."
+                  : selectedSheet?.data}
+              </pre>
+
+              {!loadingSheetName && selectedSheet && (
+                <div className="popup-buttons">
+                  <button onClick={handleDownload}>Download</button>
+                  <button onClick={handleCopyToClipboard}>Copy Data</button>
+                  <button onClick={copySheetName}>Copy Sheet Name</button>
+                  <button onClick={toggleFullscreen}>
+                    {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                  </button>
+                  {isFullscreen && (
+                    <button onClick={toggleHalfscreen}>
+                      {isHalfscreen ? "Fullscreen" : "Halfscreen"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedSheet(null);
+                      setIsFullscreen(false);
+                      setIsHalfscreen(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
+
+        <footer className="footer">
+          © 2025 Your Company Name. All rights reserved.
+        </footer>
       </div>
     </>
   );
