@@ -13,7 +13,7 @@ const sheets = [
   },
   {
     name: "IT Complaint FMS Sheet",
-    url: `https://script.google.com/macros/s/AKfycbw0m4oy56-81YLxqb2HnFAfThGhMb1AuRNwME0UboJI2L9B0zYAbuZW8FHtvTy5DTg9Kw/exec?sheet=Help Ticket System`
+    url: `https://script.google.com/macros/s/AKfycbzFZq0qZziOqG_plfHUy6Ba7YL-KlE1bxwuiN4TZnerenOZUaQZpKdwgsGhgw5d-47c/exec?=IT Complaint FMS Sheet`
   },
   {
     name: "Leave Request Form",
@@ -75,7 +75,7 @@ const sheets = [
     name: "Marketing Activity",
     url: "https://script.google.com/macros/s/AKfycbyKT10mHAFmdGI_hwzKNsREbKT8Hce0qrzn5Po1Ysg15XWr0rcTNM4J2rcgRqQtDqk/exec?sheet=Marketing Activity",
   }
-]; 
+];
 
 const rowColors = [
   "#DBEAFE", "#E9D5FF", "#D1FAE5", "#FEF3C7", "#FBCFE8", "#FFEDD5", "#FECACA"
@@ -86,7 +86,6 @@ export default function App() {
   const [loadingSheetName, setLoadingSheetName] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [darkMode, setDarkMode] = useState(false);
-
   const [sortAsc, setSortAsc] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHalfscreen, setIsHalfscreen] = useState(false);
@@ -101,8 +100,7 @@ export default function App() {
         const res = await fetch(sheet.url);
         if (!res.ok) throw new Error("Network response was not ok");
         const json = await res.json();
-        const formattedData = typeof json === "string" ? json : JSON.stringify(json, null, 2);
-        setSelectedSheet({ name: sheet.name, data: formattedData });
+        setSelectedSheet({ name: sheet.name, data: json });
       } catch (error) {
         setSelectedSheet({ name: sheet.name, data: "Error fetching data: " + error.message });
       } finally {
@@ -111,6 +109,39 @@ export default function App() {
     } else {
       setSelectedSheet(sheet);
     }
+  };
+
+  const parseTSVData = (data) => {
+    if (!data || typeof data !== "string") return null;
+    const rows = data.trim().split("\n");
+    const tableData = rows.map(row => row.split("\t").map(cell => cell.trim()));
+    return tableData;
+  };
+
+  const isTSVData = (data) => {
+    if (!data || typeof data !== "string") return false;
+    const rows = data.trim().split("\n");
+    return rows.every(row => row.includes("\t"));
+  };
+
+  const parseJSONData = (data) => {
+    if (!Array.isArray(data)) return null;
+    if (data.length === 0) return [];
+    const headers = Object.keys(data[0]);
+    const rows = data.map(item => headers.map(header => item[header] || ""));
+    return [headers, ...rows];
+  };
+
+  const canDisplayAsTable = (data) => {
+    if (isTSVData(data)) return true;
+    if (Array.isArray(data)) return true;
+    return false;
+  };
+
+  const getTableData = (data) => {
+    if (isTSVData(data)) return parseTSVData(data);
+    if (Array.isArray(data)) return parseJSONData(data);
+    return null;
   };
 
   const filteredSheets = sheets.filter(sheet =>
@@ -135,23 +166,18 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
-  const handleDownload = () => {
+const handleDownload = () => {
     if (!selectedSheet) return;
-    const quantity = Number(prompt("Enter quantity to download:", "1"));
-    if (!quantity || quantity < 1) return alert("Quantity should be at least 1");
-
-    for (let i = 1; i <= quantity; i++) {
-      const element = document.createElement("a");
-      const file = new Blob([selectedSheet.data], { type: "text/plain" });
-      element.href = URL.createObjectURL(file);
-      element.download = `${selectedSheet.name.replace(/\s+/g, "_")}_copy${i}.txt`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-    }
+    const element = document.createElement("a");
+    const file = new Blob([selectedSheet.data], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = `${selectedSheet.name.replace(/\s+/g, "_")}.txt`;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
-  const handleCopyToClipboard = () => {
+const handleCopyToClipboard = () => {
     if (!selectedSheet) return alert("No sheet selected to copy.");
     navigator.clipboard.writeText(selectedSheet.data)
       .then(() => alert("Sheet data copied to clipboard!"))
@@ -388,14 +414,58 @@ export default function App() {
           color: #111827;
         }
 
-        .container.dark .popup {
-          background: #1e293b;
-          color: #e2e8f0;
-        }
-
         .container.dark .popup pre {
           background: #334155;
           color: #e2e8f0;
+        }
+
+        .popup-table {
+          width: 100%;
+          border-collapse: collapse;
+          background: #f3f4f6;
+          border-radius: 8px;
+          overflow: hidden;
+          margin-bottom: 16px;
+          max-height: 60vh;
+          overflow-y: auto;
+          border: 2px solid #d1d5db;
+        }
+
+        .container.dark .popup-table {
+          background: #334155;
+          border: 2px solid #4b5563;
+        }
+
+        .popup-table th,
+        .popup-table td {
+          padding: 12px;
+          border: 1px solid #d1d5db;
+          text-align: left;
+          font-size: 0.9rem;
+          color: #111827;
+        }
+
+        .container.dark .popup-table th,
+        .container.dark .popup-table td {
+          border: 1px solid #4b5563;
+          color: #e2e8f0;
+        }
+
+        .popup-table th {
+          background: #e5e7eb;
+          font-weight: 600;
+        }
+
+        .container.dark .popup-table th {
+          background: #4b5563;
+        }
+
+        .popup-table tr:nth-child(even) {
+          background: #e5e7eb;
+        }
+
+        .container.dark .popup-table tr:nth-child(even) {
+          background: #475569;
         }
 
         .popup-buttons {
@@ -527,11 +597,32 @@ export default function App() {
                   ? `Loading "${loadingSheetName}"...`
                   : selectedSheet?.name}
               </h2>
-              <pre>
-                {loadingSheetName
-                  ? "Fetching data, please wait..."
-                  : selectedSheet?.data}
-              </pre>
+              {loadingSheetName ? (
+                <pre>Fetching data, please wait...</pre>
+              ) : canDisplayAsTable(selectedSheet?.data) ? (
+                <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
+                  <table className="popup-table">
+                    <thead>
+                      <tr>
+                        {getTableData(selectedSheet.data)[0].map((header, index) => (
+                          <th key={index}>{header || `Column ${index + 1}`}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getTableData(selectedSheet.data).slice(1).map((row, rowIndex) => (
+                        <tr key={rowIndex}>
+                          {row.map((cell, cellIndex) => (
+                            <td key={cellIndex}>{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <pre>{typeof selectedSheet?.data === "string" ? selectedSheet.data : JSON.stringify(selectedSheet.data, null, 2)}</pre>
+              )}
 
               {!loadingSheetName && selectedSheet && (
                 <div className="popup-buttons">
